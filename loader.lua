@@ -1,4 +1,4 @@
--- PS99 Soccer Field Walker v2.5 | plalettescripts
+-- PS99 Soccer Field Walker v3.4 | plalettescripts | KEYLESS
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
@@ -22,19 +22,23 @@ local function GetFieldPath()
     local path = {}
     local fx = field.Position.X
     local fz = field.Position.Z
-    local hx = math.floor(field.Size.X / 2) - 15
-    local hz = math.floor(field.Size.Z / 2) - 15
+    
+    -- Grenzen
+    local leftX = fx - 60    -- Weiter links
+    local rightX = fx + 60   -- Weiter rechts
+    local topZ = fz - 45     -- Wieder mehr oben (wie vorher)
+    local bottomZ = fz + 50  -- Unten 50
     local y = field.Position.Y + 5
     
     local goRight = true
-    for z = -hz, hz, 15 do
+    for z = topZ, bottomZ, 15 do
         if goRight then
-            for x = -hx, hx, 15 do
-                table.insert(path, Vector3.new(fx + x, y, fz + z))
+            for x = leftX, rightX, 15 do
+                table.insert(path, Vector3.new(x, y, z))
             end
         else
-            for x = hx, -hx, -15 do
-                table.insert(path, Vector3.new(fx + x, y, fz + z))
+            for x = rightX, leftX, -15 do
+                table.insert(path, Vector3.new(x, y, z))
             end
         end
         goRight = not goRight
@@ -49,8 +53,8 @@ GUI.Name = "PS99_plalette"
 GUI.Parent = CoreGui
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 170, 0, 80)
-Main.Position = UDim2.new(0.5, -85, 0.02, 0)
+Main.Size = UDim2.new(0, 180, 0, 80)
+Main.Position = UDim2.new(0.5, -90, 0.02, 0)
 Main.BackgroundColor3 = Color3.fromRGB(20, 26, 20)
 Main.BorderSizePixel = 0
 Main.Active = true
@@ -69,8 +73,8 @@ Instance.new("UICorner", Border).CornerRadius = UDim.new(0, 9)
 
 -- Minimiert
 local Mini = Instance.new("Frame")
-Mini.Size = UDim2.new(0, 160, 0, 28)
-Mini.Position = UDim2.new(0.5, -80, 0.02, 0)
+Mini.Size = UDim2.new(0, 170, 0, 28)
+Mini.Position = UDim2.new(0.5, -85, 0.02, 0)
 Mini.BackgroundColor3 = Color3.fromRGB(20, 26, 20)
 Mini.BorderSizePixel = 0
 Mini.Visible = false
@@ -83,7 +87,7 @@ local MiniText = Instance.new("TextLabel")
 MiniText.Size = UDim2.new(1, 0, 1, 0)
 MiniText.BackgroundTransparency = 1
 MiniText.TextColor3 = Color3.fromRGB(50, 255, 50)
-MiniText.Text = "⚽ PS99 | plalettescripts"
+MiniText.Text = "⚽ PS99 | plalettescripts | KEYLESS"
 MiniText.Font = Enum.Font.SourceSansBold
 MiniText.TextSize = 11
 MiniText.Parent = Mini
@@ -101,7 +105,7 @@ local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 22)
 Title.BackgroundColor3 = Color3.fromRGB(24, 30, 24)
 Title.TextColor3 = Color3.fromRGB(50, 255, 50)
-Title.Text = "⚽ Soccer Walker v2.5"
+Title.Text = "⚽ Soccer Walker v3.4"
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
 Title.Parent = Main
@@ -137,7 +141,7 @@ Status.Size = UDim2.new(1, -8, 0, 18)
 Status.Position = UDim2.new(0, 4, 0, 58)
 Status.BackgroundTransparency = 1
 Status.TextColor3 = Color3.fromRGB(150, 170, 150)
-Status.Text = "plalettescripts | v2.5"
+Status.Text = "plalettescripts | v3.4 | KEYLESS"
 Status.Font = Enum.Font.SourceSans
 Status.TextSize = 9
 Status.Parent = Main
@@ -171,20 +175,27 @@ task.spawn(function()
             
             hum.WalkSpeed = 120
             
+            if pathIndex > #path then
+                pathIndex = 1
+            end
+            
             local target = path[pathIndex]
             hum:MoveTo(target)
             Status.Text = "🚶 " .. pathIndex .. "/" .. #path
             
+            local waited = 0
             repeat
                 task.wait(0.05)
+                waited = waited + 0.05
                 if not enabled then break end
-            until (hrp.Position - target).Magnitude < 10
+                if waited > 3 then break end
+            until (hrp.Position - target).Magnitude < 8
             
             pathIndex = pathIndex + 1
             if pathIndex > #path then
                 pathIndex = 1
                 Status.Text = "✅ Neustart"
-                task.wait(0.2)
+                task.wait(0.3)
             end
         end
         task.wait(0.05)

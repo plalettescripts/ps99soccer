@@ -1,26 +1,24 @@
--- PS99 Soccer Orb Collector v1.4 FIXED | plalettescripts
+-- PS99 Soccer Orb Collector v1.5 | plalettescripts
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
-local RunService = game:GetService("RunService")
 
-local Config = {
-    AutoCollect = false
-}
+local Config = { AutoCollect = false }
 
--- Soccer Orbs finden (einfach, schnell)
+-- Orbs finden
 local function FindOrbs()
     local orbs = {}
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("BasePart") then
             local n = obj.Name:lower()
-            if n:find("orb") or n:find("ball") or n:find("token") then
+            if n:find("orb") or n:find("ball") or n:find("token") or n:find("soccer") then
                 table.insert(orbs, obj)
             end
         end
     end
+    -- Fallback: gelbe Neon-Objekte
     if #orbs == 0 then
         for _, obj in ipairs(Workspace:GetDescendants()) do
             if obj:IsA("BasePart") and obj.Material == Enum.Material.Neon and obj.BrickColor == BrickColor.new("Bright yellow") then
@@ -62,12 +60,11 @@ Status.Size = UDim2.new(1, -8, 0, 16)
 Status.Position = UDim2.new(0, 4, 0, 37)
 Status.BackgroundTransparency = 1
 Status.TextColor3 = Color3.fromRGB(150, 170, 150)
-Status.Text = "plalettescripts | v1.4"
+Status.Text = "plalettescripts | v1.5"
 Status.Font = Enum.Font.SourceSans
 Status.TextSize = 9
 Status.Parent = Main
 
--- EIN EINZIGER einfacher Loop
 local enabled = false
 TogBtn.MouseButton1Click:Connect(function()
     enabled = not enabled
@@ -76,25 +73,38 @@ TogBtn.MouseButton1Click:Connect(function()
     TogBtn.BackgroundColor3 = enabled and Color3.fromRGB(50, 180, 50) or Color3.fromRGB(40, 50, 40)
 end)
 
--- EIN Loop, kein Lag
+-- Haupt-Loop: Geht JEDEN Orb einzeln durch
 task.spawn(function()
     while true do
         if enabled and LocalPlayer.Character then
             local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                local orbs = FindOrbs()
-                for _, orb in ipairs(orbs) do
-                    if (orb.Position - hrp.Position).Magnitude < 25 then
-                        hrp.CFrame = CFrame.new(orb.Position + Vector3.new(0, 3, 0))
-                        task.wait(0.05)
-                        firetouchinterest(hrp, orb, 0)
-                        firetouchinterest(hrp, orb, 1)
-                        Status.Text = "✅ Sammle..."
-                        break
-                    end
+            if not hrp then continue end
+            
+            local orbs = FindOrbs()
+            
+            -- Sortiere nach Entfernung (nächster zuerst)
+            table.sort(orbs, function(a, b)
+                return (a.Position - hrp.Position).Magnitude < (b.Position - hrp.Position).Magnitude
+            end)
+            
+            for _, orb in ipairs(orbs) do
+                if not enabled then break end
+                local dist = (orb.Position - hrp.Position).Magnitude
+                
+                if dist < 200 then
+                    -- DIREKT zum Orb teleportieren (nicht nur ein Stück)
+                    hrp.CFrame = CFrame.new(orb.Position)
+                    task.wait(0.1)
+                    
+                    -- Einsammeln
+                    firetouchinterest(hrp, orb, 0)
+                    firetouchinterest(hrp, orb, 1)
+                    Status.Text = "✅ Gesammelt!"
+                    task.wait(0.1)
                 end
             end
+            Status.Text = "🔍 Suche..."
         end
-        task.wait(0.5)
+        task.wait(1)
     end
 end)

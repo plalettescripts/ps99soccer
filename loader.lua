@@ -1,14 +1,15 @@
--- PS99 Soccer Orb Collector v1.1| plalettescripts
+-- PS99 Soccer Orb Auto-Walk Collector v1.2 | plalettescripts
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local PathfindingService = game:GetService("PathfindingService")
 local CoreGui = game:GetService("CoreGui")
 
 local LocalPlayer = Players.LocalPlayer
 
 local Config = {
     AutoCollect = false,
-    Radius = 30
+    Speed = 50
 }
 
 -- Soccer Orbs finden
@@ -18,19 +19,43 @@ local function FindOrbs()
         if obj:IsA("BasePart") or obj:IsA("MeshPart") then
             local n = obj.Name:lower()
             if n:find("soccer") or n:find("orb") or n:find("ball") or n:find("goal") or n:find("token") then
-                table.insert(orbs, obj)
+                if obj.Transparency < 0.8 and obj.Size.Magnitude < 15 then
+                    table.insert(orbs, obj)
+                end
             end
         end
     end
-    -- Fallback: gelbe/grüne Objekte
+    -- Fallback: gelbe Objekte
     if #orbs == 0 then
         for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("BasePart") and obj.BrickColor == BrickColor.new("Bright yellow") and obj.Transparency < 0.5 then
+            if obj:IsA("BasePart") and obj.BrickColor == BrickColor.new("Bright yellow") and obj.Transparency < 0.5 and obj.Size.Magnitude < 10 then
                 table.insert(orbs, obj)
             end
         end
     end
     return orbs
+end
+
+-- Nächsten Orb finden
+local function GetNearestOrb()
+    local orbs = FindOrbs()
+    if #orbs == 0 then return nil, 999 end
+    
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil, 999 end
+    
+    local nearest = nil
+    local nearestDist = math.huge
+    
+    for _, orb in ipairs(orbs) do
+        local dist = (orb.Position - hrp.Position).Magnitude
+        if dist < nearestDist then
+            nearestDist = dist
+            nearest = orb
+        end
+    end
+    
+    return nearest, nearestDist
 end
 
 -- GUI
@@ -39,7 +64,7 @@ GUI.Name = "PS99"
 GUI.Parent = CoreGui
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0, 160, 0, 80)
+Main.Size = UDim2.new(0, 170, 0, 100)
 Main.Position = UDim2.new(0.01, 0, 0.15, 0)
 Main.BackgroundColor3 = Color3.fromRGB(18, 22, 18)
 Main.BorderSizePixel = 0
@@ -49,83 +74,94 @@ Main.Parent = GUI
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 8)
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 22)
+Title.Size = UDim2.new(1, 0, 0, 24)
 Title.BackgroundColor3 = Color3.fromRGB(22, 26, 22)
 Title.TextColor3 = Color3.fromRGB(50, 255, 50)
-Title.Text = "⚽ Soccer Collector"
+Title.Text = "⚽ Soccer Collector v1.2"
 Title.Font = Enum.Font.SourceSansBold
 Title.TextSize = 12
 Title.Parent = Main
 
-local ToggleFrame = Instance.new("Frame")
-ToggleFrame.Size = UDim2.new(1, -8, 0, 30)
-ToggleFrame.Position = UDim2.new(0, 4, 0, 26)
-ToggleFrame.BackgroundColor3 = Color3.fromRGB(26, 30, 26)
-ToggleFrame.Parent = Main
-Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0, 4)
+-- Toggle
+local TogFrame = Instance.new("Frame")
+TogFrame.Size = UDim2.new(1, -8, 0, 28)
+TogFrame.Position = UDim2.new(0, 4, 0, 28)
+TogFrame.BackgroundColor3 = Color3.fromRGB(26, 30, 26)
+TogFrame.Parent = Main
+Instance.new("UICorner", TogFrame).CornerRadius = UDim.new(0, 4)
 
-local ToggleLabel = Instance.new("TextLabel")
-ToggleLabel.Size = UDim2.new(0.5, 0, 1, 0)
-ToggleLabel.Position = UDim2.new(0.04, 0, 0, 0)
-ToggleLabel.BackgroundTransparency = 1
-ToggleLabel.TextColor3 = Color3.fromRGB(220, 240, 220)
-ToggleLabel.Text = "Auto Collect: OFF"
-ToggleLabel.Font = Enum.Font.SourceSansSemibold
-ToggleLabel.TextSize = 11
-ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-ToggleLabel.Parent = ToggleFrame
+local TogLabel = Instance.new("TextLabel")
+TogLabel.Size = UDim2.new(0.5, 0, 1, 0)
+TogLabel.Position = UDim2.new(0.04, 0, 0, 0)
+TogLabel.BackgroundTransparency = 1
+TogLabel.TextColor3 = Color3.fromRGB(220, 240, 220)
+TogLabel.Text = "Auto Walk: OFF"
+TogLabel.Font = Enum.Font.SourceSansSemibold
+TogLabel.TextSize = 11
+TogLabel.TextXAlignment = Enum.TextXAlignment.Left
+TogLabel.Parent = TogFrame
 
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 30, 0, 16)
-ToggleBtn.Position = UDim2.new(0.88, -30, 0, 7)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 60, 50)
-ToggleBtn.Text = ""
-ToggleBtn.Parent = ToggleFrame
-Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 8)
+local TogBtn = Instance.new("TextButton")
+TogBtn.Size = UDim2.new(0, 30, 0, 16)
+TogBtn.Position = UDim2.new(0.88, -30, 0, 6)
+TogBtn.BackgroundColor3 = Color3.fromRGB(50, 60, 50)
+TogBtn.Text = ""
+TogBtn.Parent = TogFrame
+Instance.new("UICorner", TogBtn).CornerRadius = UDim.new(0, 8)
 
+-- Status
 local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, -8, 0, 18)
+Status.Size = UDim2.new(1, -8, 0, 36)
 Status.Position = UDim2.new(0, 4, 0, 60)
 Status.BackgroundTransparency = 1
-Status.TextColor3 = Color3.fromRGB(150, 170, 150)
-Status.Text = "v1.1 | plalettescripts"
+Status.TextColor3 = Color3.fromRGB(180, 200, 180)
+Status.Text = "Bereit\nv1.2 | plalettescripts"
 Status.Font = Enum.Font.SourceSans
-Status.TextSize = 9
+Status.TextSize = 10
+Status.TextXAlignment = Enum.TextXAlignment.Left
 Status.Parent = Main
 
 local on = false
-ToggleBtn.MouseButton1Click:Connect(function()
+TogBtn.MouseButton1Click:Connect(function()
     on = not on
     Config.AutoCollect = on
-    ToggleLabel.Text = "Auto Collect: " .. (on and "ON" or "OFF")
-    ToggleBtn.BackgroundColor3 = on and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 60, 50)
+    TogLabel.Text = "Auto Walk: " .. (on and "ON" or "OFF")
+    TogBtn.BackgroundColor3 = on and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 60, 50)
 end)
 
--- Auto Collect (nur diese eine Funktion, kein Lag)
+-- Auto Walk & Collect
 task.spawn(function()
-    while task.wait(0.15) do
+    while task.wait() do
         if Config.AutoCollect and LocalPlayer.Character then
             pcall(function()
+                local hum = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
                 local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                if not hrp then return end
+                if not hum or not hrp then return end
                 
-                local orbs = FindOrbs()
-                local collected = 0
+                -- Speed setzen
+                hum.WalkSpeed = Config.Speed
                 
-                for _, orb in ipairs(orbs) do
-                    if (orb.Position - hrp.Position).Magnitude <= Config.Radius then
-                        firetouchinterest(hrp, orb, 0)
-                        firetouchinterest(hrp, orb, 1)
-                        collected = collected + 1
+                -- Nächsten Orb finden
+                local nearest, dist = GetNearestOrb()
+                
+                if nearest and dist < 500 then
+                    -- Zum Orb laufen
+                    hum:MoveTo(nearest.Position)
+                    Status.Text = "🏃 Läuft zu Orb\n" .. math.floor(dist) .. "m entfernt"
+                    
+                    -- Wenn nah genug, einsammeln
+                    if dist < 8 then
+                        firetouchinterest(hrp, nearest, 0)
+                        firetouchinterest(hrp, nearest, 1)
+                        Status.Text = "✅ Eingesammelt!\nSuche nächsten..."
+                        task.wait(0.1)
                     end
-                end
-                
-                if collected > 0 then
-                    Status.Text = "Gesammelt: " .. collected .. " | plalettescripts"
                 else
-                    Status.Text = "Suche... | plalettescripts"
+                    Status.Text = "🔍 Suche Orbs...\nKeine in Reichweite"
+                    task.wait(1)
                 end
             end)
         end
+        task.wait(0.1)
     end
 end)

@@ -1,4 +1,4 @@
--- PS99 Soccer Orb Collector v1.1 | plalettescripts
+-- PS99 Soccer Orb Collector v1.1| plalettescripts
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
